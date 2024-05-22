@@ -5,11 +5,64 @@ import pandas as pd
 import plotly.graph_objects as go
 import numpy as np
 
+
+from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.preprocessing import StandardScaler
+
+
 def get_clean_data():
-    data = pd.read_csv('C:/Users/GUILIANNO FOSSONG/Downloads/STREAMLIT-APP-CANCER/Data/data.csv')
-    data = data.drop(['id'], axis=1)
-    data['diagnosis'] = data['diagnosis'].map({'M': 1, 'B': 0 })
+    # Read the data from the CSV file
+    data = pd.read_csv(r'C:/Users/GUILIANNO FOSSONG/Downloads/STREAMLIT-APP-CANCER/Data/data.csv')
+    # Perform any data cleaning or preprocessing if needed
+    
+    # Handle non-numeric values
+    data.replace({'M': 0, 'B': 1}, inplace=True)  # Replace 'M' with 0 and 'B' with 1
+    
     return data
+
+class CustomScaler(BaseEstimator, TransformerMixin):
+    def __init__(self, scaler):
+        self.scaler = scaler
+        self.feature_names = None
+
+    def fit(self, X, y=None):
+        self.feature_names = X.columns
+        self.scaler.fit(X, y)
+        return self
+
+    def transform(self, X):
+        # Check if feature names are consistent
+        if list(X.columns) != list(self.feature_names):
+            raise ValueError("The feature names should match those that were passed during fit.")
+        
+        # Transform X using the scaler
+        X_scaled = self.scaler.transform(X)
+        # Create DataFrame with original feature names
+        X_scaled_df = pd.DataFrame(X_scaled, columns=self.feature_names)
+        
+        return X_scaled_df
+
+    def fit_transform(self, X, y=None):
+        self.fit(X, y)
+        return self.transform(X)
+
+    def set_feature_names(self, feature_names):
+        self.feature_names = feature_names
+
+def add_sidebar():
+    st.sidebar.header("Cell Nuclear Measurements")
+    # Call get_clean_data() to retrieve the cleaned data
+    data = get_clean_data()
+
+    # Usage example
+    scaler = StandardScaler()
+    custom_scaler = CustomScaler(scaler)
+    scaled_data = custom_scaler.fit_transform(data)
+    custom_scaler.set_feature_names(data.columns)  # Set feature names explicitly
+    
+
+# Call the add_sidebar() function to start your Streamlit app
+add_sidebar()
 
 
 def add_sidebar():
@@ -179,7 +232,7 @@ with st.container():
     st.title("Breast Cancer Predictor")
     st.write("Please connect this app to your cytology lab to help diagnose breast cancer from your tissue sample. This app predicts using a machine learning model whether a breast mass is benign or malignant based on the measurements it receives from your cytosis lab. You can also update the measurements by hand using the sliders in the sidebar. ")
   
-col1, col2 = st.columns([3,1])
+col1, _, col2 = st.columns([3, 0.5, 2])
 
 with col1:
   radar_chart = get_radar_chart(input_data)
@@ -187,7 +240,7 @@ with col1:
  
 with col2:
   add_predictions(input_data)
-  
+
 
 
 
